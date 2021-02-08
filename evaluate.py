@@ -44,6 +44,12 @@ def load_data(ftype, path, transform):
     return data_loader
 
 
+def init_networks():
+    vgg_net = VGGPerceptualLoss()
+    vgg_net.to(torch.device("cuda:0"))
+    return vgg_net
+
+
 def compute_l1_loss(output, target):
     criterion = nn.L1Loss()
     l1_loss = criterion(output, target)
@@ -54,29 +60,29 @@ def compute_content_loss(output, target):
     return F.mse_loss(output, target)
 
 
-def compute_vgg_loss(output, target):
-    net = VGGPerceptualLoss()
-    net.to(torch.device("cuda:0"))
-    loss = net(output, target)
-    return loss
+def compute_vgg_loss(vgg_net, output, target):
+    with torch.no_grad():
+        loss = vgg_net(output, target)
+        return loss
 
 
 def main():
     cmos_path = "./data/CMOS"
     gt_path = "./data/ground_truth"
     fusion_path = "./data/SPAD_HDR_SR"
-    ds_names = np.array(["cmos ldr", "luminance fusion"])
+    ds_names = np.array(["cmos ldr", "spad bilinear"])
     loss_func_names = ["l1 loss", "content loss", "vgg16 loss"]
 
     set_device()
     torch.cuda.empty_cache()
     transform = set_transform()
+    vgg_net = init_networks()
 
     # initialize data loaders
     cmos_data_loader = load_data("png", cmos_path, transform)
     gt_data_loader = load_data("hdr", gt_path, transform)
-    fusion_data_loader = load_data("hdr", fusion_path, transform)
-    data_loaders = [gt_data_loader, cmos_data_loader, fusion_data_loader]
+    spad_bi_data_loader = load_data("hdr", fusion_path, transform)
+    data_loaders = [gt_data_loader, cmos_data_loader, spad_bi_data_loader]
 
     # check if data sets match in size
     for i in range(1, len(data_loaders)):
@@ -89,8 +95,6 @@ def main():
     print("size of dataset = {}, mini-batch size = {}".format(ds_size, _mini_batch_size))
 
     iterables = [iter(data_loaders[i]) for i in range(1, len(data_loaders))]
-    # cmos_it = iter(cmos_data_loader)
-    # gt_it = iter(gt_data_loader)
 
     metrics = None
     for i in range(len(iterables)):
@@ -108,14 +112,11 @@ def main():
 
             l1_loss = compute_l1_loss(output_data, gt_data)
             content_loss = compute_content_loss(output_data, gt_data)
-            torch.cuda.empty_cache()
-            # vgg_loss = compute_vgg_loss(output_data, gt_data) # TODO
-            vgg_loss = -1
+            vgg_loss = compute_vgg_loss(vgg_net, output_data, gt_data)
             cur_metrics = np.add(cur_metrics, cur_mini_batch_size * np.array([l1_loss, content_loss, vgg_loss]))
 
         cur_metrics = cur_metrics / ds_size
         metrics = np.array([cur_metrics]) if metrics is None else np.vstack((metrics, cur_metrics))
-        gt_it = None
 
     table_content = np.hstack((ds_names.reshape(-1, 1), metrics))
     table = tabulate(table_content, loss_func_names, tablefmt="pretty")

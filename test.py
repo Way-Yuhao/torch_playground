@@ -4,9 +4,8 @@ import numpy as np
 import torch
 from tabulate import tabulate
 
-a = np.array([[1, 2, 3], [4, 5, 6]])
-data_list = np.array(["cmos data", "spad data"])
-a = np.hstack((data_list.reshape(-1, 1), a))
-headers = ["l1 loss", "content loss", "vgg loss"]
-table = tabulate(a, headers, tablefmt="pretty")
-print(table)
+cmos = cv2.imread("./data/CMOS/1/0_cmos.png", -1)
+gt = cv2.imread("./data/ground_truth/1/0.hdr", -1)
+spad = cv2.imread("./data/SPAD_HDR_SR/1/0_spad_bilinear.hdr", -1)
+
+print(1)
