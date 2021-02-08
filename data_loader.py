@@ -40,6 +40,5 @@ gt_data_loader = torch.utils.data.DataLoader(
 
 dataiter = iter(gt_data_loader)
 images, labels = dataiter.next()
-im_loaded = imshow(images)
-im_cv2 = cv2.imread(gt_path + "/1/0.hdr", -1)
-print(1)
+
+print(images.shape)
