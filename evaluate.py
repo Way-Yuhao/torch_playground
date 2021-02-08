@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from vgg_perceptual_loss import VGGPerceptualLoss
 from tqdm import tqdm
+from tabulate import tabulate
 
 cmos_path = "./data/CMOS"
 gt_path = "./data/ground_truth"
@@ -40,8 +41,7 @@ def load_data(ftype, path, transform):
             customDataFolder.ImageFolder(path, transform=transform),
             batch_size=_mini_batch_size, num_workers=0, shuffle=False)
     else:
-        data_loader = None
-        # TODO: raise error here
+        raise TypeError("undefined behavior. Expected input images to be .hdr or .png")
     return data_loader
 
 
@@ -67,17 +67,25 @@ def main():
     torch.cuda.empty_cache()
     transform = set_transform()
 
+    ds_names = np.array(["cmos ldr"])
+    loss_func_names = ["l1 loss", "content loss", "vgg16 loss"]
+
+    # initialize data loaders
     cmos_data_loader = load_data("png", cmos_path, transform)
     gt_data_loader = load_data("hdr", gt_path, transform)
 
+    # check if data sets match in size
     assert(len(cmos_data_loader.dataset) == len(gt_data_loader.dataset))
     num_mini_batches = len(cmos_data_loader)
     ds_size = len(cmos_data_loader.dataset)
     print("size of dataset = {}, mini-batch size = {}".format(ds_size, _mini_batch_size))
 
-    l1_loss, content_loss, vgg_loss = 0, 0, 0
     cmos_it = iter(cmos_data_loader)
     gt_it = iter(gt_data_loader)
+
+    # computing loss
+    l1_loss, content_loss, vgg_loss = 0, 0, 0
+    metrics = None
     for i in tqdm(range(num_mini_batches)):
         cmos_data, _ = cmos_it.next()
         gt_data, _ = gt_it.next()
@@ -91,9 +99,20 @@ def main():
     l1_loss /= ds_size
     content_loss /= ds_size
     vgg_loss /= ds_size
-    print("l1 loss = ", l1_loss.item())
-    print("content loss = ", content_loss.item())
-    print("vgg loss = ", vgg_loss.item())
+    cur_metrics = np.array([l1_loss, content_loss, vgg_loss])
+
+    metrics = np.array([cur_metrics]) if metrics is None else np.vstack((metrics, cur_metrics))
+    print(metrics)
+    print(metrics.shape)
+
+    # setting up table to print
+    table_content = np.hstack((ds_names.reshape(-1, 1), metrics))
+    table = tabulate(table_content, loss_func_names, tablefmt="pretty")
+    print(table)
+
+    # print("l1 loss = ", l1_loss.item())
+    # print("content loss = ", content_loss.item())
+    # print("vgg loss = ", vgg_loss.item())
 
     torch.cuda.empty_cache()
 
