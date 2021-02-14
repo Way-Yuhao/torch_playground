@@ -1,16 +1,11 @@
-import os
 import torch
 import numpy as np
-import torchvision
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
-from PIL import Image
-import customDataFolder
-import cv2
+from playground import customDataFolder
 
-cmos_path = "./data/CMOS"
-gt_path = "./data/ground_truth"
+cmos_path = "../data/CMOS"
+gt_path = "../data/ground_truth"
 ds_size = 54
 
 

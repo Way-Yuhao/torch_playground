@@ -19,9 +19,9 @@ def compute_l1_loss_log(output, target):
     l1_loss = criterion(torch.log10(output+eps), torch.log10(target+eps))
     return l1_loss.item()
 
-cmos = cv2.imread("./data/CMOS/1/0_cmos.png", -1)
-gt = cv2.imread("./data/ground_truth/1/0.hdr", -1)
-spad = cv2.imread("./data/SPAD_HDR_SR/1/0_spad_bilinear.hdr", -1)
+cmos = cv2.imread("../data/CMOS/1/0_cmos.png", -1)
+gt = cv2.imread("../data/ground_truth/1/0.hdr", -1)
+spad = cv2.imread("../data/SPAD_HDR_SR/1/0_spad_bilinear.hdr", -1)
 
 num_pixels = cmos.size
 print("size = ", num_pixels)
