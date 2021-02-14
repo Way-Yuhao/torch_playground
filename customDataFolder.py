@@ -170,17 +170,12 @@ def accimage_loader(path):
 def cv_loader(path):
     img = cv2.imread(path, -1)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    # im_pil = Image.fromarray(img)
-    im_pil = img
-    return im_pil
+    img = img.astype("float32")
+    return img
 
 
 def default_loader(path):
-    from torchvision import get_image_backend
-    if get_image_backend() == 'accimage':
-        return accimage_loader(path)
-    else:
-        return cv_loader(path)
+    return cv_loader(path)
 
 
 class ImageFolder(DatasetFolder):
