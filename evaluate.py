@@ -80,9 +80,12 @@ def set_sci_format(n):
 
 def main():
     cmos_path = "./data/CMOS"
+    cmos_short_path = "./data/CMOS_short"
     gt_path = "./data/ground_truth"
-    fusion_path = "./data/SPAD_HDR_SR"
-    ds_names = np.array(["cmos ldr", "spad bilinear"])
+    spad_path = "./data/SPAD_HDR_SR"
+    exp_brkt_path = "./data/exp_brkt"
+    fusion_path = "./data/fusion"
+    ds_names = np.array(["cmos long exposure", "cmos short exposure", "spad bilinear", "exposure bracketing", "luminance fusion"])
     loss_func_names = ["l1 loss", "content loss", "vgg16 loss"]
 
     set_device()
@@ -90,10 +93,13 @@ def main():
     transform = set_transform()
     vgg_net = init_networks()
     # initialize data loaders
-    cmos_data_loader = load_data("hdr", cmos_path, transform)
     gt_data_loader = load_data("hdr", gt_path, transform)
-    spad_bi_data_loader = load_data("hdr", fusion_path, transform)
-    data_loaders = [gt_data_loader, cmos_data_loader, spad_bi_data_loader]
+    cmos_data_loader = load_data("hdr", cmos_path, transform)
+    cmos_short_data_loader = load_data("hdr", cmos_short_path, transform)
+    spad_bi_data_loader = load_data("hdr", spad_path, transform)
+    exp_brkt_data_loader = load_data("hdr", exp_brkt_path, transform)
+    fusion_loader = load_data("hdr", fusion_path, transform)
+    data_loaders = [gt_data_loader, cmos_data_loader, cmos_short_data_loader, spad_bi_data_loader, exp_brkt_data_loader, fusion_loader]
 
     # check if data sets match in size
     for i in range(1, len(data_loaders)):
