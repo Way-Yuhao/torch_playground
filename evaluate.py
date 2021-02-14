@@ -122,7 +122,6 @@ def main():
             gt_data = gt_data.to(torch.device("cuda:0"))
             cur_mini_batch_size = len(output_data)
 
-            # l1_loss = compute_l1_loss(output_data.cpu().squeeze().permute(1, 2, 0), gt_data.cpu().squeeze().permute(1, 2, 0))
             l1_loss = compute_l1_loss(output_data, gt_data)
             content_loss = compute_content_loss(output_data, gt_data)
             vgg_loss = compute_vgg_loss(vgg_net, output_data, gt_data)
@@ -132,46 +131,8 @@ def main():
         metrics = np.array([cur_metrics]) if metrics is None else np.vstack((metrics, cur_metrics))
 
     table_content = np.hstack((ds_names.reshape(-1, 1), metrics))
-    table = tabulate(table_content, loss_func_names, tablefmt="pretty", floatfmt=".2f")
+    table = tabulate(table_content, loss_func_names, tablefmt="orgtbl", floatfmt=".2f")
     print(table)
-    # np.set_printoptions(precision=3, suppress=False)
-    # print(metrics)
-
-
-
-
-
-    # # computing loss
-    # l1_loss, content_loss, vgg_loss = 0, 0, 0
-    # metrics = None
-    # for i in tqdm(range(num_mini_batches)):
-    #     cmos_data, _ = cmos_it.next()
-    #     gt_data, _ = gt_it.next()
-    #     cmos_data = cmos_data.to(torch.device("cuda:0"))
-    #     gt_data = gt_data.to(torch.device("cuda:0"))
-    #     cur_mini_batch_size = len(cmos_data)
-    #
-    #     l1_loss += compute_l1_loss(cmos_data, gt_data) * cur_mini_batch_size
-    #     content_loss += compute_content_loss(cmos_data, gt_data) * cur_mini_batch_size
-    #     vgg_loss += compute_vgg_loss(cmos_data, gt_data) * cur_mini_batch_size
-    # l1_loss /= ds_size
-    # content_loss /= ds_size
-    # vgg_loss /= ds_size
-    # cur_metrics = np.array([l1_loss, content_loss, vgg_loss])
-    #
-    # metrics = np.array([cur_metrics]) if metrics is None else np.vstack((metrics, cur_metrics))
-    # print(metrics)
-    # print(metrics.shape)
-
-    # setting up table to print
-    # table_content = np.hstack((ds_names.reshape(-1, 1), metrics))
-    # table = tabulate(table_content, loss_func_names, tablefmt="pretty")
-    # print(table)
-
-    # print("l1 loss = ", l1_loss.item())
-    # print("content loss = ", content_loss.item())
-    # print("vgg loss = ", vgg_loss.item())
-
     torch.cuda.empty_cache()  # clear inter values, ipython does not clear vars
 
 if __name__ == "__main__":
