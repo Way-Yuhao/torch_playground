@@ -123,7 +123,7 @@ def main():
         for _ in tqdm(range(num_mini_batches)):
             output_data, _ = iterables[i].next()
             gt_data, _ = gt_it.next()
-            # gt_data = gt_data * 100000
+            gt_data = gt_data * (torch.mean(output_data)/torch.mean(gt_data))
             output_data = output_data.to(torch.device("cuda:0"))
             gt_data = gt_data.to(torch.device("cuda:0"))
             cur_mini_batch_size = len(output_data)
