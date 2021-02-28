@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from playground.vgg_perceptual_loss import VGGPerceptualLoss
 from tqdm import tqdm
 from tabulate import tabulate
+import time
 
 """GLOBAL PARAMETERS"""
 _mini_batch_size = 8
@@ -33,11 +34,11 @@ def load_data(ftype, path, transform):
     if ftype == "png":
         data_loader = torch.utils.data.DataLoader(
             torchvision.datasets.ImageFolder(path, transform=transform),
-            batch_size=_mini_batch_size, num_workers=0, shuffle=False)
+            batch_size=_mini_batch_size, num_workers=4, shuffle=False)
     elif ftype == "hdr":
         data_loader = torch.utils.data.DataLoader(
             customDataFolder.ImageFolder(path, transform=transform),
-            batch_size=_mini_batch_size, num_workers=0, shuffle=False)
+            batch_size=_mini_batch_size, num_workers=4, shuffle=False)
     else:
         raise TypeError("undefined behavior. Expected input images to be .hdr or .png")
     return data_loader
@@ -85,14 +86,15 @@ def scale_data_constant(output, target):
 
 
 def scale_data_dist(output, target):
-    output = (output - torch.mean(output)) / torch.std(output)
-    target = (output - torch.mean(target)) / torch.std(target)
-    assert(not torch.isnan(output).any().item())
-    assert(not torch.isnan(target).any().item())
+    output = (output - torch.median(output)) / torch.std(output)
+    target = (target - torch.median(target)) / torch.std(target)
+    output = output - torch.min(output)
+    target = target - torch.min(target)
     return output, target
 
 
 def main():
+    start_time = time.time()
     cmos_path = "./data/CMOS"
     cmos_short_path = "./data/CMOS_short"
     gt_path = "./data/ground_truth"
@@ -155,6 +157,7 @@ def main():
     table = tabulate(table_content, loss_func_names, tablefmt="orgtbl", floatfmt=".2f")
     print(table)
     torch.cuda.empty_cache()  # clear inter values, ipython does not clear vars
+    print("--- %s seconds ---" % (time.time() - start_time))
 
 if __name__ == "__main__":
     main()

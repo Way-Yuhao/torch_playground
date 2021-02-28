@@ -80,7 +80,7 @@ def plot_classes_preds(net, images, labels):
                     color=("green" if preds[idx]==labels[idx].item() else "red"))
     return fig
 
-device = torch.device("cuda:0")
+device = torch.device("cpu")
 writer = SummaryWriter('runs/fashion_mnist_experiment_1')
 
 transform = transforms.Compose(
