@@ -76,6 +76,22 @@ def set_sci_format(n):
     return np.format_float_scientific(n, precision=3)
 
 
+def scale_data_physical(output, target):
+    pass
+
+
+def scale_data_constant(output, target):
+    return output, target * 100000
+
+
+def scale_data_dist(output, target):
+    output = (output - torch.mean(output)) / torch.std(output)
+    target = (output - torch.mean(target)) / torch.std(target)
+    assert(not torch.isnan(output).any().item())
+    assert(not torch.isnan(target).any().item())
+    return output, target
+
+
 def main():
     cmos_path = "./data/CMOS"
     cmos_short_path = "./data/CMOS_short"
@@ -84,7 +100,7 @@ def main():
     exp_brkt_path = "./data/exp_brkt"
     fusion_path = "./data/fusion"
     ds_names = np.array(["cmos long exposure", "cmos short exposure", "spad bilinear", "exposure bracketing", "luminance fusion"])
-    loss_func_names = ["l1 loss", "content loss", "vgg16 loss"]
+    loss_func_names = ["l1 loss", "content loss", "style loss"]
 
     set_device()
     torch.cuda.empty_cache()
@@ -121,12 +137,13 @@ def main():
         for _ in tqdm(range(num_mini_batches)):
             output_data, _ = iterables[i].next()
             gt_data, _ = gt_it.next()
-            gt_data = gt_data * (torch.mean(output_data)/torch.mean(gt_data))
+            # gt_data = gt_data * (torch.mean(output_data)/torch.mean(gt_data))
             output_data = output_data.to(torch.device("cuda:0"))
             gt_data = gt_data.to(torch.device("cuda:0"))
+            output_data, gt_data = scale_data_dist(output_data, gt_data)
             cur_mini_batch_size = len(output_data)
 
-            l1_loss = compute_l1_loss(output_data, gt_data)
+            l1_loss = compute_l1_loss(output_data, gt_data)  # FIXME
             content_loss = compute_content_loss(output_data, gt_data)
             vgg_loss = compute_vgg_loss(vgg_net, output_data, gt_data)
             cur_metrics = np.add(cur_metrics, cur_mini_batch_size * np.array([l1_loss, content_loss, vgg_loss]))
