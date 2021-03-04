@@ -6,6 +6,7 @@ from torch.utils.data import Dataset
 from playground import customDataFolder
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.transforms.functional as TF
 from playground.vgg_perceptual_loss import VGGPerceptualLoss
 from tqdm import tqdm
 from tabulate import tabulate
@@ -27,7 +28,10 @@ def set_device():
 
 
 def set_transform():
-    return transforms.Compose([transforms.ToTensor()])
+    return transforms.Compose([
+        transforms.ToTensor()#,
+        # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
 
 
 def load_data(ftype, path, transform):
@@ -49,10 +53,45 @@ def init_networks():
     vgg_net.to(torch.device("cuda:0"))
     return vgg_net
 
+def scale_data_physical(output, target):
+    pass
+
+
+def scale_data_constant(output, target):
+    return output, target * 100000
+
+
+def scale_data_dist(output, target):
+    output = (output - torch.mean(output)) / torch.std(output)
+    target = (target - torch.mean(target)) / torch.std(target)
+    # output = output - torch.min(output)
+    # target = target - torch.min(target)
+    return output, target
+
+
+def normalize(output, target):
+    # output = TF.normalize(output, mean=torch.mean(output), std=torch.std(output))
+    # target = TF.normalize(target, mean=torch.mean(target), std=torch.std(target))
+    target = target * 100000
+    target = target / torch.max(output)
+    output = output / torch.max(output)
+    return output, target
+
+
+def apply_log(output, target):
+    return torch.log10(output+eps), torch.log10(target+eps)
+
+
+def tone_map(output, target):
+    mu = 5000  # amount of compression
+    output = torch.log(1 + mu * output) / np.log(1 + mu)
+    target = torch.log(1 + mu * target) / np.log(1 + mu)
+    return output, target
+
 
 def compute_l1_loss(output, target):
     criterion = nn.L1Loss()
-    l1_loss = criterion(torch.log10(output+eps), torch.log10(target+eps))
+    l1_loss = criterion(output, target)
     return l1_loss.item()
 
 
@@ -64,33 +103,17 @@ def compute_l1_numpy(output, target):
 
 
 def compute_content_loss(output, target):
-    return F.mse_loss(torch.log10(output+eps), torch.log10(target+eps)).item()
+    return F.mse_loss(output, target).item()
 
 
 def compute_vgg_loss(vgg_net, output, target):
     with torch.no_grad():
-        loss = vgg_net(torch.log10(output+eps), torch.log10(target+eps))
+        loss = vgg_net(output, target)
         return loss.item()
 
 
 def set_sci_format(n):
     return np.format_float_scientific(n, precision=3)
-
-
-def scale_data_physical(output, target):
-    pass
-
-
-def scale_data_constant(output, target):
-    return output, target * 100000
-
-
-def scale_data_dist(output, target):
-    output = (output - torch.median(output)) / torch.std(output)
-    target = (target - torch.median(target)) / torch.std(target)
-    output = output - torch.min(output)
-    target = target - torch.min(target)
-    return output, target
 
 
 def main():
@@ -142,9 +165,11 @@ def main():
             # gt_data = gt_data * (torch.mean(output_data)/torch.mean(gt_data))
             output_data = output_data.to(torch.device("cuda:0"))
             gt_data = gt_data.to(torch.device("cuda:0"))
-            output_data, gt_data = scale_data_dist(output_data, gt_data)
+            # output_data, gt_data = scale_data_dist(output_data, gt_data)
+            output_data, gt_data = normalize(output_data, gt_data)
             cur_mini_batch_size = len(output_data)
 
+            output_data, gt_data = tone_map(output_data, gt_data)
             l1_loss = compute_l1_loss(output_data, gt_data)  # FIXME
             content_loss = compute_content_loss(output_data, gt_data)
             vgg_loss = compute_vgg_loss(vgg_net, output_data, gt_data)
@@ -157,7 +182,7 @@ def main():
     table = tabulate(table_content, loss_func_names, tablefmt="orgtbl", floatfmt=".2f")
     print(table)
     torch.cuda.empty_cache()  # clear inter values, ipython does not clear vars
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print("--- {:.2f} seconds ---".format(time.time() - start_time))
 
 if __name__ == "__main__":
     main()
