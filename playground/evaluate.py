@@ -3,10 +3,9 @@ import numpy as np
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset
-from playground import customDataFolder
+import customDataFolder
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.transforms.functional as TF
 from playground.vgg_perceptual_loss import VGGPerceptualLoss
 from tqdm import tqdm
 from tabulate import tabulate
